@@ -1,39 +1,50 @@
-// File: SirenMod.java
-package com.example.sirenmod;
+package com.example.sirenmod.block;
 
-import cpw.mods.fml.common.Mod;
-import cpw.mods.fml.common.event.FMLPreInitializationEvent;
-import cpw.mods.fml.common.network.NetworkRegistry;
-import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.common.registry.GameRegistry;
+import com.example.sirenmod.tileentity.SirenTileEntity;
+import com.example.sirenmod.client.sound.ProceduralSirenSound;
 import net.minecraft.block.Block;
-import net.minecraft.creativetab.CreativeTabs;
-import com.example.sirenmod.network.PacketPlaySirenSound;
-import com.example.sirenmod.network.PacketStopSirenSound;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.material.Material;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.state.BooleanProperty;
+import net.minecraft.state.StateContainer;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 
-@Mod(modid = SirenMod.MODID, version = SirenMod.VERSION, name = SirenMod.NAME)
-public class SirenMod {
-    public static final String MODID = "sirenmod";
-    public static final String VERSION = "1.0";
-    public static final String NAME = "Siren Mod";
-    public static Block sirenBlock;
-    public static final SimpleNetworkWrapper network = NetworkRegistry.INSTANCE.newSimpleChannel("sirenmod");
+public class SirenBlock extends Block {
 
-    @Mod.EventHandler
-    public void preInit(FMLPreInitializationEvent event) {
-        sirenBlock = new BlockSiren()
-                .setBlockName("sirenBlock")
-                .setBlockTextureName(MODID + ":siren_block")
-                .setCreativeTab(CreativeTabs.tabBlock);
+    public static final BooleanProperty POWERED = BooleanProperty.create("powered");
 
-        GameRegistry.registerBlock(sirenBlock, "siren_block");
-        registerPackets();
+    public SirenBlock() {
+        super(Properties.create(Material.IRON));
+        this.setDefaultState(this.stateContainer.getBaseState().with(POWERED, false));
     }
 
-    private void registerPackets() {
-        int id = 0;
-        network.registerMessage(PacketPlaySirenSound.Handler.class, PacketPlaySirenSound.class, id++, Side.CLIENT);
-        network.registerMessage(PacketStopSirenSound.Handler.class, PacketStopSirenSound.class, id++, Side.CLIENT);
+    @Override
+    public void onPlayerClick(World worldIn, BlockPos pos, PlayerEntity player) {
+        // Trigger sound playback when the block is activated
+        if (!worldIn.isRemote) {
+            boolean powered = worldIn.getBlockState(pos).get(POWERED);
+            worldIn.setBlockState(pos, this.getDefaultState().with(POWERED, !powered), 3);
+
+            if (!powered) {
+                // Start siren sound
+                ProceduralSirenSound.play(pos.getX(), pos.getY(), pos.getZ());
+            } else {
+                // Stop siren sound
+                ProceduralSirenSound.stop(pos.getX(), pos.getY(), pos.getZ());
+            }
+        }
+    }
+
+    @Override
+    public TileEntity createTileEntity(BlockState state, World world) {
+        return new SirenTileEntity();
+    }
+
+    @Override
+    protected void fillStateContainer(StateContainer.Builder<Block, BlockState> builder) {
+        builder.add(POWERED);
     }
 }

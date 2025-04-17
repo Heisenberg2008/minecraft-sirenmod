@@ -1,0 +1,11 @@
+{
+  "siren_sound": {
+    "category": "master",
+    "sounds": [
+      {
+        "name": "sirenmod:sounds/siren_sound",
+        "stream": false
+      }
+    ]
+  }
+}
